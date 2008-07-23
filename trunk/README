@@ -1,0 +1,95 @@
+
+g-pypi
+======
+
+
+`http://code.google.com/p/g-pypi/ <http://code.google.com/p/g-pypi/>`_
+
+g-pypi creates Python package ebuilds for Gentoo Linux by querying The Cheese Shop.
+
+Although it's in the early stages of development, testing has generated over 1,200 ebuilds automatically.
+
+Note: g-pypi will only be as good at creating ebuilds as The Python Package Index information is. People can leave out a lot of information when submitting info to PyPI, making ebuild creation impossible.
+
+Basic Usage
+===========
+
+Output ebuild to stdout:
+
+::
+
+  g-pypi -p package_name
+
+
+Write ebuild to your overlay:
+
+::
+
+  g-pypi package_name
+
+Create live svn ebuild (if subversion URI is listed in PyPI):
+
+::
+
+  g-pypi -s package_name
+
+By default your first overlay listed in /etc/make.conf PORTDIR_OVERLAY
+is used. If you want to use a different one, edit ~/.g-pypirc
+
+By default your first KEYWORD listed in /etc/make.conf KEYWORDS
+is used. If you want to use a different one, edit ~/.g-pypirc or prefix your command with ACCEPT_KEYWORDS e.g. 
+
+::
+
+   $ ACCEPT_KEYWORDS='~amd64' g-pypi foopkg
+
+
+You can over-ride some variables if g-pypi can't figure out the
+PN, PV etc.
+
+
+::
+
+   -n or --PN=package-name
+
+   -v or --PV=version
+
+   --MY_P=my_p
+
+   --MY_PN=my_pn
+
+   --MY_PV=my_pv
+
+
+If you don't specify a portage category with '-c' the ebuild will be
+placed in dev-python
+
+Use '-V' for verbose output for debugging.
+
+
+INSTALL
+=======
+
+g-pypi is available in my overlay directory:
+
+If you haven't emerged and configured app-portage/layman:
+
+::
+
+   emerge layman
+   echo "source /usr/portage/local/layman/make.conf" >> /etc/make.conf
+   layman --add pythonhead
+   emerge g-pypi
+
+Subversion
+==========
+
+`subversion repository <http://g-pypi.googlecode.com/svn/trunk/#egg=g-pypi-dev>`_
+
+Hint: You can use to create a live svn ebuild for g-pypi ;)
+ 
+::
+
+  g-pypi -s g-pypi
+
+

@@ -1,0 +1,12 @@
+INSTALL
+=======
+
+g-pypi is available in my overlay directory:
+
+If you haven't emerged and configured app-portage/layman:
+   emerge layman
+   echo "source /usr/portage/local/layman/make.conf" >> /etc/make.conf
+
+layman --add pythonhead
+emerge g-pypi
+

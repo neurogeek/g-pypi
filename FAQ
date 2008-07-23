@@ -1,0 +1,3 @@
+
+Q: It says the SOURCE_URI isn't available. Huh?
+A: That means someone entered their package info on PyPI without bothering to give a URL to the package. Annoying, huh?

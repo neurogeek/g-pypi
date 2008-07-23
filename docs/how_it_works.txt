@@ -1,0 +1,21 @@
+
+This is a summary of how g-pypi finds the information it needs to create
+an ebuild.
+
+If you give g-pypi a package name with no other arguments it will:
+
+1) Query PyPI for the package name and return the metadata
+   a) If PyPI doesn't have the SRC_URI it tries to use setuptools to find it.
+ 
+2) Use enamer.py to determine the package name and version if
+possible (PN, MY_P, PV, MY_PV etc.) 
+
+3) Write initial ebuild
+
+4) Download the package and unarchive it and try to determine ${S}
+
+5) Write ebuild again adding ${S}
+
+
+
+

@@ -33,9 +33,9 @@ from pygments.lexers import BashLexer
 from pygments.formatters import TerminalFormatter, HtmlFormatter
 from pygments.formatters import BBCodeFormatter
 
-from g_pypi.portage_utils import make_overlay_dir, find_s_dir, unpack_ebuild
-from g_pypi.portage_utils import get_portdir, get_workdir, find_egg_info_dir
-from g_pypi.portage_utils import valid_cpn, get_installed_ver
+from g_pypi.portage_utils import (make_overlay_dir, find_s_dir, unpack_ebuild,
+        get_portdir, get_workdir, find_egg_info_dir, valid_cpn,
+        get_installed_ver, get_repo_names)
 from g_pypi.config import MyConfig
 from g_pypi import enamer
 from g_pypi.__init__ import __version__ as VERSION
@@ -475,8 +475,20 @@ class Ebuild:
 
     def write_ebuild(self, overwrite=False):
         """Write ebuild file"""
+        #Use command-line overlay if specified, else the one in .g-pyprc
+        if self.options.overlay:
+            overlay_name = self.options.overlay
+            overlays = get_repo_names()
+            if overlays.has_key(overlay_name):
+                overlay_path = overlays[overlay_name]
+            else:
+                self.logger.error("Couldn't find overylay by that name. I know about these:")
+                self.logger.error(overlays)
+                sys.exit(1)
+        else:
+            overlay_path = self.config['overlay']
         ebuild_dir = make_overlay_dir(self.options.category, self.vars['pn'], \
-                self.config['overlay'])
+                overlay_path)
         if not ebuild_dir:
             self.logger.error("Couldn't create overylay ebuild directory.")
             sys.exit(2)
@@ -484,7 +496,7 @@ class Ebuild:
                 self.vars['p'])
         if os.path.exists(self.ebuild_path) and not overwrite:
             #self.logger.error("Ebuild exists. Use -o to overwrite.")
-            self.logger.error("Ebuild exists, skipping: %s" % self.ebuild_path)
+            self.logger.warn("Ebuild exists, skipping: %s" % self.ebuild_path)
             return
         try:
             out = open(self.ebuild_path, "w")
@@ -527,6 +539,7 @@ def get_portage_license(my_license):
     Map defined classifier license to Portage license
 
     http://cheeseshop.python.org/pypi?%3Aaction=list_classifiers
+    We should probably check this list with every major list, eh?
     """
     my_license = my_license.split(":: ")[-1:][0]
     known_licenses = {

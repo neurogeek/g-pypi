@@ -43,7 +43,7 @@ class StdOut:
 
     """
     Filter stdout or stderr from specific modules
-    So far this is just used for pkg_resources
+    So far this is just used for pkg_resources which is quite noisy
     """
 
     def __init__(self, stream, modulenames):
@@ -353,6 +353,10 @@ def main():
     opt_parser.add_option("--MY_P", action='store', dest=
                          "my_p", default=False, help=
                          "Specify MY_P")
+
+    opt_parser.add_option("-l", "--overlay", action='store', dest=
+                         'overlay', metavar='OVERLAY_NAME', default=None, help=
+                         'Specify overy to use by name ($OVERLAY/profiles/repo_name)')
 
     opt_parser.add_option("--format", action='store', dest=
                          "format", default=None, help=

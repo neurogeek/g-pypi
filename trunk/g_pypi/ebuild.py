@@ -66,7 +66,6 @@ class Ebuild:
         self.pypi_pkg_name = up_pn
         self.config = MyConfig.config
         self.options = MyConfig.options
-        #self.logger = MyConfig.logger
         self.logger = logging.getLogger("g-pypi")
         self.metadata = None
         self.unpacked_dir = None
@@ -482,8 +481,10 @@ class Ebuild:
             if overlays.has_key(overlay_name):
                 overlay_path = overlays[overlay_name]
             else:
-                self.logger.error("Couldn't find overylay by that name. I know about these:")
-                self.logger.error(overlays)
+                self.logger.error("Couldn't find overylay/repository by that"+
+                        " name. I know about these:")
+                for repo in sorted(overlays.keys()):
+                    self.logger.error("  " + repo.ljust(18) + overlays[repo])
                 sys.exit(1)
         else:
             overlay_path = self.config['overlay']

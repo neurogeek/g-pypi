@@ -1,5 +1,4 @@
-#Frequently Asked Questions
-
+#labels Featured
 = FAQ =
 
     * *Q:* It says it can't find the SRC_URI for a particular package, why?

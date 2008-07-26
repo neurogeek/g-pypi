@@ -18,7 +18,6 @@ import logging
 
 from portage import config as portage_config
 from portage import settings as portage_settings
-from portage.const import REPO_NAME_LOC
 
 try:
     #portage >= 2.2
@@ -52,7 +51,7 @@ def get_repo_names():
         [os.path.realpath(t) for t in ENV["PORTDIR_OVERLAY"].split()]
     treemap = {}
     for path in porttrees:
-        repo_name_path = os.path.join(path, REPO_NAME_LOC)
+        repo_name_path = os.path.join(path, 'profiles/repo_name')
         try:
             repo_name = open(repo_name_path, 'r').readline().strip()
             treemap[repo_name] = path

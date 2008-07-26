@@ -195,7 +195,7 @@ def get_keyword():
     try:
         arch = ENV["ACCEPT_KEYWORDS"].split(' ')[0]
     except KeyError:
-        self.logger.error("No ACCEPT_KEYWORDS found, using ~x86")
+        LOGGER.error("No ACCEPT_KEYWORDS found, using ~x86")
         arch = '~x86'
 
     #New ebuilds must be ~arch

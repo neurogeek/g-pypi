@@ -16,7 +16,9 @@ import commands
 import logging
 #import fnmatch
 
-import portage
+from portage import config as portage_config
+from portage import settings as portage_settings
+from portage.const import REPO_NAME_LOC
 
 try:
     #portage >= 2.2
@@ -31,11 +33,32 @@ import gentoolkit
 
 __docformat__ = 'restructuredtext'
 
-ENV = portage.config(clone=portage.settings).environ()
+ENV = portage_config(clone=portage_settings).environ()
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 LOGGER.addHandler(logging.StreamHandler())
 
+
+def get_repo_names():
+    """
+    Return a dict of overlay names with their paths
+    e.g.
+    {'reponame': '/path/to/repo', ...}
+
+    @returns: dict with repoman/paths
+
+    """
+    porttrees = [ENV['PORTDIR']] + \
+        [os.path.realpath(t) for t in ENV["PORTDIR_OVERLAY"].split()]
+    treemap = {}
+    for path in porttrees:
+        repo_name_path = os.path.join(path, REPO_NAME_LOC)
+        try:
+            repo_name = open(repo_name_path, 'r').readline().strip()
+            treemap[repo_name] = path
+        except (OSError,IOError):
+            LOGGER.warn("No repo_name in %s" % path)
+    return treemap
 
 def get_installed_ver(cpn):
     """
@@ -251,3 +274,5 @@ def find_egg_info_dir(root):
 #    for path, dirs, files in os.walk(os.path.abspath(root)):
 #        for filename in fnmatch.filter(dirs, pattern):
 #            yield os.path.join(path, filename)
+if __name__ == '__main__':
+    print get_repo_names()

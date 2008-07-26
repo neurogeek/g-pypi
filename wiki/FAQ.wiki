@@ -1,5 +1,3 @@
 #labels Featured
-= FAQ =
-
     * *Q:* It says it can't find the SRC_URI for a particular package, why?
     * *A:* The Cheese Shop does not require package owners to provide download links to their packages because PyPI can be used as a package index and/or archive. An uncoming g-pypi feature will let you pass a URL to g-pypi and it will fetch, unpack and create an ebuild. 

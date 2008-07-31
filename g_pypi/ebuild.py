@@ -345,6 +345,44 @@ class Ebuild:
         if req not in self.requires:
             self.requires.append(req)
 
+    def get_docs(self):
+        """
+        Add src_install for installing docs and examples if found
+        and appropriate USE flags e.g. IUSE='doc examples' 
+        
+        """
+        doc_dirs = ['doc', 'docs']
+        example_dirs = ['example', 'examples', 'demo', 'demos']
+        have_docs = False
+        have_examples = False
+        src_install = ''
+        for ddir in doc_dirs:
+            if os.path.exists(os.path.join(self.unpacked_dir, ddir)):
+                have_docs = ddir
+                self.add_use("doc")
+                break
+
+        for edir in example_dirs:
+            if os.path.exists(os.path.join(self.unpacked_dir, edir)):
+                have_examples = edir
+                self.add_use("examples")
+                break
+
+        if have_docs or have_examples:
+            src_install += '\tdistutils_src_install\n'
+            if have_docs:
+                src_install += '\tif use doc; then\n'
+                src_install += '\t\tinsinto /usr/share/doc/"${PF}"\n'
+                src_install += '\t\tdodocs -r "${S}"/%s/*\n' % have_docs
+                src_install += '\tfi\n'
+            if have_examples:
+                src_install += '\tif use examples; then\n'
+                src_install += '\t\tinsinto /usr/share/doc/"${PF}"/examples\n'
+                src_install += '\t\tdoins -r "${S}"/%s/*\n' % have_examples
+                src_install += '\tfi'
+        return src_install
+
+
     def get_src_test(self):
         """Create src_test if tests detected"""
         nose_test = '''\tPYTHONPATH=. "${python}" setup.py nosetests || die "tests failed"'''
@@ -395,6 +433,7 @@ class Ebuild:
             #    not self.options.subversion:
             self.post_unpack() 
             functions['src_test'] = self.get_src_test() 
+            functions['src_install'] = self.get_docs()
         # *_f variables are formatted text ready for ebuild
         self.vars['depend_f'] = format_depend(self.vars['depend'])
         self.vars['rdepend_f'] = format_depend(self.vars['rdepend'])

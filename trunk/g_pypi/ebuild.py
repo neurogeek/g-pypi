@@ -372,8 +372,7 @@ class Ebuild:
             src_install += '\tdistutils_src_install\n'
             if have_docs:
                 src_install += '\tif use doc; then\n'
-                src_install += '\t\tinsinto /usr/share/doc/"${PF}"\n'
-                src_install += '\t\tdodocs -r "${S}"/%s/*\n' % have_docs
+                src_install += '\t\tdodoc "${S}"/%s/*\n' % have_docs
                 src_install += '\tfi\n'
             if have_examples:
                 src_install += '\tif use examples; then\n'

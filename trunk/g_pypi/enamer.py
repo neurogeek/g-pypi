@@ -281,7 +281,7 @@ def sanitize_uri(uri):
     """
     return uri
 
-def get_vars(uri, up_pn, up_pv, pn="", pv="", my_pn="", my_pv="", my_p=""):
+def get_vars(uri, up_pn, up_pv, pn="", pv="", my_pn="", my_pv=""):
     """
     Determine P* and MY_* variables
 
@@ -343,6 +343,11 @@ def get_vars(uri, up_pn, up_pv, pn="", pv="", my_pn="", my_pv="", my_p=""):
         pn = pn.lower()
     p = "%s-%s" % (pn, pv)
 
+    #Check if we need to use MY_P based on src's uri
+    if my_p:
+        src_uri, my_p_raw = get_myp(uri)
+    else:
+        src_uri, my_p, my_p_raw = get_src_uri(uri)
 
     #Make sure we have a valid P
     if not portage_dep.isvalidatom("=dev-python/%s-%s" % (pn, pv)):
@@ -366,19 +371,6 @@ def get_vars(uri, up_pn, up_pv, pn="", pv="", my_pn="", my_pv="", my_p=""):
         else:
             my_p = my_p.replace(pn, "${PN}")
             my_p = my_p.replace(pv, "${PV}")
-
-    if my_pn and not my_p:
-    	if my_pv:
-	    	my_p = '%s-%s' % (my_pn, my_pv)
-	elif not my_pv:
-	    	my_p = '%s-%s' % (my_pn, '${PV}')
-	my_pn = ''
-
-    #Check if we need to use MY_P based on src's uri
-    if my_p:
-        src_uri, my_p_raw = get_myp(uri)
-    else:
-        src_uri, my_p, my_p_raw = get_src_uri(uri)
 
     return {'pn': pn,
             'pv': pv,

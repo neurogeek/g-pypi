@@ -99,12 +99,20 @@ class Ebuild:
             self.options.pv = "9999"
             self.vars['esvn_repo_uri'] = download_url
             self.add_inherit("subversion")
+
+	if up_pn.find('.') > -1:
+	    self.vars['python_modname'] = self.options.my_pn = up_pn
+	    up_pn = self.filter_pkgname(up_pn)
+	    self.options.pn = up_pn
+
         ebuild_vars = enamer.get_vars(download_url, up_pn, up_pv, self.options.pn,
-                self.options.pv, self.options.my_pn, self.options.my_pv)
+                self.options.pv, self.options.my_pn, self.options.my_pv, self.options.my_p)
+
         for key in ebuild_vars.keys():
             if not self.vars.has_key(key):
                 self.vars[key] = ebuild_vars[key]
-        self.vars['p'] = '%s-%s' % (self.vars['pn'], self.vars['pv'])
+
+	self.vars['p'] = '%s-%s' % (self.vars['pn'], self.vars['pv'])
 
     def set_metadata(self, metadata):
         """Set metadata"""
@@ -141,6 +149,7 @@ class Ebuild:
             self.vars['my_pn'] = ebuild_vars['my_pn']
         else:
             self.vars['my_pn'] = ''
+
         if ebuild_vars.has_key('my_pv'):
             self.vars['my_pv'] = ebuild_vars['my_pv']
         else:
@@ -287,7 +296,7 @@ class Ebuild:
             pkg_name = req.project_name.lower()
             if not len(req.specs):
                 self.add_setuptools_depend(req)
-                self.add_rdepend("dev-python/%s" % pkg_name)
+                self.add_rdepend("dev-python/%s" % self.filter_pkgname(pkg_name))
                 added_dep = True
                 #No version of requirement was specified so we only add
                 #dev-python/pkg_name
@@ -306,29 +315,29 @@ class Ebuild:
                         #for turbogears has >=2.2,<3.0 which would translate to
                         #portage's =dev-python/cherrypy-2.2*
                         self.logger.warn(" **** Requirement %s has multi-specs ****" % req)
-                        self.add_rdepend("dev-python/%s" % pkg_name)
+                        self.add_rdepend("dev-python/%s" % self.filter_pkgname(pkg_name))
                         break
                 #Requirement.specs is a list of (comparator,version) tuples
                 if comparator == "==":
                     comparator = "="
                 if valid_cpn("%sdev-python/%s-%s" % (comparator, pkg_name, ver)):
-                    self.add_rdepend("%sdev-python/%s-%s" % (comparator, pkg_name, ver))
+                    self.add_rdepend("%sdev-python/%s-%s" % (comparator, self.filter_pkgname(pkg_name), ver))
                 else:
                     self.logger.info(\
                             "Invalid PV in dependency: (Requirement %s) %sdev-python/%s-%s" \
                             % (req, comparator, pkg_name, ver)
                             )
-                    installed_pv = get_installed_ver("dev-python/%s" % pkg_name)
+                    installed_pv = get_installed_ver("dev-python/%s" % self.filter_pkgname(pkg_name))
                     if installed_pv:
                         self.add_rdepend(">=dev-python/%s-%s" % \
-                                (pkg_name, installed_pv))
+                                (self.filter_pkgname(pkg_name), installed_pv))
                     else:
                         #If we have it installed, use >= installed version
                         #If package has invalid version and we don't have
                         #an ebuild in portage, just add PN to DEPEND, no 
                         #version. This means the dep ebuild will have to
                         #be created by adding --MY_? options using the CLI
-                        self.add_rdepend("dev-python/%s" % pkg_name)
+                        self.add_rdepend("dev-python/%s" % self.filter_pkgname(pkg_name))
                 added_dep = True
             if not added_dep:
                 self.add_warning("Couldn't determine dependency: %s" % req)
@@ -432,7 +441,6 @@ class Ebuild:
             #    not self.options.subversion:
             self.post_unpack() 
             functions['src_test'] = self.get_src_test() 
-            functions['src_install'] = self.get_docs()
         # *_f variables are formatted text ready for ebuild
         self.vars['depend_f'] = format_depend(self.vars['depend'])
         self.vars['rdepend_f'] = format_depend(self.vars['rdepend'])
@@ -573,6 +581,9 @@ class Ebuild:
 
             self.vars["s"] = "${WORKDIR}/%s" % unpacked_dir
 
+    def filter_pkgname(self, pkgname):
+    	return pkgname.replace('.', '-')
+
 def get_portage_license(my_license):
     """
     Map defined classifier license to Portage license
@@ -654,3 +665,4 @@ def format_depend(dep_list):
             middle += "\t%s\n" % dep
         output += middle + "\t" + dep_list[-1]
     return output
+

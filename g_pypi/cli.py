@@ -251,6 +251,7 @@ class GPyPI(object):
         download_url = self.get_uri()
         try:
             ebuild = Ebuild(self.package_name, self.version, download_url)
+
         except portage_exception.InvalidVersionString:
             self.logger.error("Can't determine PV, use -v to set it: %s-%s" % \
                     (self.package_name, self.version))

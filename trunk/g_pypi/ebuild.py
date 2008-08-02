@@ -33,9 +33,9 @@ from pygments.lexers import BashLexer
 from pygments.formatters import TerminalFormatter, HtmlFormatter
 from pygments.formatters import BBCodeFormatter
 
-from g_pypi.portage_utils import (make_overlay_dir, find_s_dir, unpack_ebuild,
-        get_portdir, get_workdir, find_egg_info_dir, valid_cpn,
-        get_installed_ver, get_repo_names)
+from g_pypi.portage_utils import make_overlay_dir, find_s_dir, unpack_ebuild
+from g_pypi.portage_utils import get_portdir, get_workdir, find_egg_info_dir
+from g_pypi.portage_utils import valid_cpn, get_installed_ver
 from g_pypi.config import MyConfig
 from g_pypi import enamer
 from g_pypi.__init__ import __version__ as VERSION
@@ -66,6 +66,7 @@ class Ebuild:
         self.pypi_pkg_name = up_pn
         self.config = MyConfig.config
         self.options = MyConfig.options
+        #self.logger = MyConfig.logger
         self.logger = logging.getLogger("g-pypi")
         self.metadata = None
         self.unpacked_dir = None
@@ -99,20 +100,12 @@ class Ebuild:
             self.options.pv = "9999"
             self.vars['esvn_repo_uri'] = download_url
             self.add_inherit("subversion")
-
-	if up_pn.find('.') > -1:
-	    self.vars['python_modname'] = self.options.my_pn = up_pn
-	    up_pn = self.filter_pkgname(up_pn)
-	    self.options.pn = up_pn
-
         ebuild_vars = enamer.get_vars(download_url, up_pn, up_pv, self.options.pn,
-                self.options.pv, self.options.my_pn, self.options.my_pv, self.options.my_p)
-
+                self.options.pv, self.options.my_pn, self.options.my_pv)
         for key in ebuild_vars.keys():
             if not self.vars.has_key(key):
                 self.vars[key] = ebuild_vars[key]
-
-	self.vars['p'] = '%s-%s' % (self.vars['pn'], self.vars['pv'])
+        self.vars['p'] = '%s-%s' % (self.vars['pn'], self.vars['pv'])
 
     def set_metadata(self, metadata):
         """Set metadata"""
@@ -149,7 +142,6 @@ class Ebuild:
             self.vars['my_pn'] = ebuild_vars['my_pn']
         else:
             self.vars['my_pn'] = ''
-
         if ebuild_vars.has_key('my_pv'):
             self.vars['my_pv'] = ebuild_vars['my_pv']
         else:
@@ -296,7 +288,7 @@ class Ebuild:
             pkg_name = req.project_name.lower()
             if not len(req.specs):
                 self.add_setuptools_depend(req)
-                self.add_rdepend("dev-python/%s" % self.filter_pkgname(pkg_name))
+                self.add_rdepend("dev-python/%s" % pkg_name)
                 added_dep = True
                 #No version of requirement was specified so we only add
                 #dev-python/pkg_name
@@ -315,29 +307,29 @@ class Ebuild:
                         #for turbogears has >=2.2,<3.0 which would translate to
                         #portage's =dev-python/cherrypy-2.2*
                         self.logger.warn(" **** Requirement %s has multi-specs ****" % req)
-                        self.add_rdepend("dev-python/%s" % self.filter_pkgname(pkg_name))
+                        self.add_rdepend("dev-python/%s" % pkg_name)
                         break
                 #Requirement.specs is a list of (comparator,version) tuples
                 if comparator == "==":
                     comparator = "="
                 if valid_cpn("%sdev-python/%s-%s" % (comparator, pkg_name, ver)):
-                    self.add_rdepend("%sdev-python/%s-%s" % (comparator, self.filter_pkgname(pkg_name), ver))
+                    self.add_rdepend("%sdev-python/%s-%s" % (comparator, pkg_name, ver))
                 else:
                     self.logger.info(\
                             "Invalid PV in dependency: (Requirement %s) %sdev-python/%s-%s" \
                             % (req, comparator, pkg_name, ver)
                             )
-                    installed_pv = get_installed_ver("dev-python/%s" % self.filter_pkgname(pkg_name))
+                    installed_pv = get_installed_ver("dev-python/%s" % pkg_name)
                     if installed_pv:
                         self.add_rdepend(">=dev-python/%s-%s" % \
-                                (self.filter_pkgname(pkg_name), installed_pv))
+                                (pkg_name, installed_pv))
                     else:
                         #If we have it installed, use >= installed version
                         #If package has invalid version and we don't have
                         #an ebuild in portage, just add PN to DEPEND, no 
                         #version. This means the dep ebuild will have to
                         #be created by adding --MY_? options using the CLI
-                        self.add_rdepend("dev-python/%s" % self.filter_pkgname(pkg_name))
+                        self.add_rdepend("dev-python/%s" % pkg_name)
                 added_dep = True
             if not added_dep:
                 self.add_warning("Couldn't determine dependency: %s" % req)
@@ -353,43 +345,6 @@ class Ebuild:
         self.logger.debug("Found dependency: %s " % req)
         if req not in self.requires:
             self.requires.append(req)
-
-    def get_docs(self):
-        """
-        Add src_install for installing docs and examples if found
-        and appropriate USE flags e.g. IUSE='doc examples' 
-        
-        """
-        doc_dirs = ['doc', 'docs']
-        example_dirs = ['example', 'examples', 'demo', 'demos']
-        have_docs = False
-        have_examples = False
-        src_install = ''
-        for ddir in doc_dirs:
-            if os.path.exists(os.path.join(self.unpacked_dir, ddir)):
-                have_docs = ddir
-                self.add_use("doc")
-                break
-
-        for edir in example_dirs:
-            if os.path.exists(os.path.join(self.unpacked_dir, edir)):
-                have_examples = edir
-                self.add_use("examples")
-                break
-
-        if have_docs or have_examples:
-            src_install += '\tdistutils_src_install\n'
-            if have_docs:
-                src_install += '\tif use doc; then\n'
-                src_install += '\t\tdodoc "${S}"/%s/*\n' % have_docs
-                src_install += '\tfi\n'
-            if have_examples:
-                src_install += '\tif use examples; then\n'
-                src_install += '\t\tinsinto /usr/share/doc/"${PF}"/examples\n'
-                src_install += '\t\tdoins -r "${S}"/%s/*\n' % have_examples
-                src_install += '\tfi'
-        return src_install
-
 
     def get_src_test(self):
         """Create src_test if tests detected"""
@@ -520,22 +475,8 @@ class Ebuild:
 
     def write_ebuild(self, overwrite=False):
         """Write ebuild file"""
-        #Use command-line overlay if specified, else the one in .g-pyprc
-        if self.options.overlay:
-            overlay_name = self.options.overlay
-            overlays = get_repo_names()
-            if overlays.has_key(overlay_name):
-                overlay_path = overlays[overlay_name]
-            else:
-                self.logger.error("Couldn't find overylay/repository by that"+
-                        " name. I know about these:")
-                for repo in sorted(overlays.keys()):
-                    self.logger.error("  " + repo.ljust(18) + overlays[repo])
-                sys.exit(1)
-        else:
-            overlay_path = self.config['overlay']
         ebuild_dir = make_overlay_dir(self.options.category, self.vars['pn'], \
-                overlay_path)
+                self.config['overlay'])
         if not ebuild_dir:
             self.logger.error("Couldn't create overylay ebuild directory.")
             sys.exit(2)
@@ -543,7 +484,7 @@ class Ebuild:
                 self.vars['p'])
         if os.path.exists(self.ebuild_path) and not overwrite:
             #self.logger.error("Ebuild exists. Use -o to overwrite.")
-            self.logger.warn("Ebuild exists, skipping: %s" % self.ebuild_path)
+            self.logger.error("Ebuild exists, skipping: %s" % self.ebuild_path)
             return
         try:
             out = open(self.ebuild_path, "w")
@@ -581,15 +522,11 @@ class Ebuild:
 
             self.vars["s"] = "${WORKDIR}/%s" % unpacked_dir
 
-    def filter_pkgname(self, pkgname):
-    	return pkgname.replace('.', '-')
-
 def get_portage_license(my_license):
     """
     Map defined classifier license to Portage license
 
     http://cheeseshop.python.org/pypi?%3Aaction=list_classifiers
-    We should probably check this list with every major list, eh?
     """
     my_license = my_license.split(":: ")[-1:][0]
     known_licenses = {
@@ -665,4 +602,3 @@ def format_depend(dep_list):
             middle += "\t%s\n" % dep
         output += middle + "\t" + dep_list[-1]
     return output
-

@@ -32,6 +32,7 @@ This will install g-pypi in /usr/bin and use your checkout directory's path.
 = Coding Style =
 
  * Follow PEP 8 when possible
+ * Run pylint before committing
 
 = Unit Tests =
 

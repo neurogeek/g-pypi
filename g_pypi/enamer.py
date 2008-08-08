@@ -141,8 +141,7 @@ def is_good_filename(uri):
 def split_p(uri):
     """Try to split a URI into PN, PV"""
     p = get_filename(uri)
-    psplit = pkgsplit(p)
-    return psplit
+    return pkgsplit(p)
 
 def get_components(uri):
     """Split uri into pn and pv and new uri"""
@@ -341,6 +340,12 @@ def get_vars(uri, up_pn, up_pv, pn="", pv="", my_pn="", my_pv=""):
         if not my_pn:
             my_pn = pn
         pn = pn.lower()
+
+    if "." in pn:
+         my_pn = '${PN/./-}'
+         pn = pn.replace('.', '-')
+         my_p = "${MY_PN}-${PV}"
+
     p = "%s-%s" % (pn, pv)
 
     #Check if we need to use MY_P based on src's uri

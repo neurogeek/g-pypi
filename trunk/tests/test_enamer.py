@@ -580,6 +580,38 @@ def test_get_vars22():
     results = get_vars(uri, up_pn, up_pv)
     _get_vars(input_test, correct, results)
 
+def test_get_vars23():
+    """
+    package name with a '.' in it, Zope packages have this often
+
+    Problem:
+         We can't have a '.' in PN
+
+    Solution:
+        We convert the . to a -
+
+    Note: We also may need to use PYTHON_MODNAME='pkg.foo'
+
+    Example:
+        zope.foo -> zope-foo
+    """
+    up_pn = "pkg.foo"
+    up_pv = "1.0"
+    uri = "http://www.foo.com/pkg.foo-1.0.tbz2"
+    input_test = (uri, up_pn, up_pv)
+    correct = \
+        {'pn': 'pkg-foo',
+         'pv': '1.0',
+         'p': 'pkg-foo-1.0',
+         'my_pn': '${PN/./-}',
+         'my_pv': '',
+         'my_p': '${MY_PN}-${PV}',
+         'my_p_raw': 'pkg.foo-1.0',
+         'src_uri': 'http://www.foo.com/${MY_P}.tbz2',
+         }
+    results = get_vars(uri, up_pn, up_pv)
+    _get_vars(input_test, correct, results)
+
 
 def _get_vars(input_test, correct, results):
     try:

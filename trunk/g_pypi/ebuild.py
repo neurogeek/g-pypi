@@ -33,9 +33,9 @@ from pygments.lexers import BashLexer
 from pygments.formatters import TerminalFormatter, HtmlFormatter
 from pygments.formatters import BBCodeFormatter
 
-from g_pypi.portage_utils import make_overlay_dir, find_s_dir, unpack_ebuild
-from g_pypi.portage_utils import get_portdir, get_workdir, find_egg_info_dir
-from g_pypi.portage_utils import valid_cpn, get_installed_ver
+from g_pypi.portage_utils import (make_overlay_dir, find_s_dir, unpack_ebuild,
+        get_portdir, get_workdir, find_egg_info_dir, valid_cpn,
+        get_installed_ver, get_repo_names)
 from g_pypi.config import MyConfig
 from g_pypi import enamer
 from g_pypi.__init__ import __version__ as VERSION
@@ -66,7 +66,6 @@ class Ebuild:
         self.pypi_pkg_name = up_pn
         self.config = MyConfig.config
         self.options = MyConfig.options
-        #self.logger = MyConfig.logger
         self.logger = logging.getLogger("g-pypi")
         self.metadata = None
         self.unpacked_dir = None
@@ -346,6 +345,43 @@ class Ebuild:
         if req not in self.requires:
             self.requires.append(req)
 
+    def get_docs(self):
+        """
+        Add src_install for installing docs and examples if found
+        and appropriate USE flags e.g. IUSE='doc examples' 
+        
+        """
+        doc_dirs = ['doc', 'docs']
+        example_dirs = ['example', 'examples', 'demo', 'demos']
+        have_docs = False
+        have_examples = False
+        src_install = ''
+        for ddir in doc_dirs:
+            if os.path.exists(os.path.join(self.unpacked_dir, ddir)):
+                have_docs = ddir
+                self.add_use("doc")
+                break
+
+        for edir in example_dirs:
+            if os.path.exists(os.path.join(self.unpacked_dir, edir)):
+                have_examples = edir
+                self.add_use("examples")
+                break
+
+        if have_docs or have_examples:
+            src_install += '\tdistutils_src_install\n'
+            if have_docs:
+                src_install += '\tif use doc; then\n'
+                src_install += '\t\tdodoc "${S}"/%s/*\n' % have_docs
+                src_install += '\tfi\n'
+            if have_examples:
+                src_install += '\tif use examples; then\n'
+                src_install += '\t\tinsinto /usr/share/doc/"${PF}"/examples\n'
+                src_install += '\t\tdoins -r "${S}"/%s/*\n' % have_examples
+                src_install += '\tfi'
+        return src_install
+
+
     def get_src_test(self):
         """Create src_test if tests detected"""
         nose_test = '''\tPYTHONPATH=. "${python}" setup.py nosetests || die "tests failed"'''
@@ -396,6 +432,7 @@ class Ebuild:
             #    not self.options.subversion:
             self.post_unpack() 
             functions['src_test'] = self.get_src_test() 
+            functions['src_install'] = self.get_docs()
         # *_f variables are formatted text ready for ebuild
         self.vars['depend_f'] = format_depend(self.vars['depend'])
         self.vars['rdepend_f'] = format_depend(self.vars['rdepend'])
@@ -475,8 +512,22 @@ class Ebuild:
 
     def write_ebuild(self, overwrite=False):
         """Write ebuild file"""
+        #Use command-line overlay if specified, else the one in .g-pyprc
+        if self.options.overlay:
+            overlay_name = self.options.overlay
+            overlays = get_repo_names()
+            if overlays.has_key(overlay_name):
+                overlay_path = overlays[overlay_name]
+            else:
+                self.logger.error("Couldn't find overylay/repository by that"+
+                        " name. I know about these:")
+                for repo in sorted(overlays.keys()):
+                    self.logger.error("  " + repo.ljust(18) + overlays[repo])
+                sys.exit(1)
+        else:
+            overlay_path = self.config['overlay']
         ebuild_dir = make_overlay_dir(self.options.category, self.vars['pn'], \
-                self.config['overlay'])
+                overlay_path)
         if not ebuild_dir:
             self.logger.error("Couldn't create overylay ebuild directory.")
             sys.exit(2)
@@ -484,7 +535,7 @@ class Ebuild:
                 self.vars['p'])
         if os.path.exists(self.ebuild_path) and not overwrite:
             #self.logger.error("Ebuild exists. Use -o to overwrite.")
-            self.logger.error("Ebuild exists, skipping: %s" % self.ebuild_path)
+            self.logger.warn("Ebuild exists, skipping: %s" % self.ebuild_path)
             return
         try:
             out = open(self.ebuild_path, "w")
@@ -527,6 +578,7 @@ def get_portage_license(my_license):
     Map defined classifier license to Portage license
 
     http://cheeseshop.python.org/pypi?%3Aaction=list_classifiers
+    We should probably check this list with every major list, eh?
     """
     my_license = my_license.split(":: ")[-1:][0]
     known_licenses = {

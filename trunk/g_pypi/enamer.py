@@ -342,9 +342,9 @@ def get_vars(uri, up_pn, up_pv, pn="", pv="", my_pn="", my_pv=""):
         pn = pn.lower()
 
     if "." in pn:
-         my_pn = '${PN/./-}'
-         pn = pn.replace('.', '-')
-         my_p = "${MY_PN}-${PV}"
+        my_pn = '${PN/./-}'
+        pn = pn.replace('.', '-')
+        my_p = "${MY_PN}-${PV}"
 
     p = "%s-%s" % (pn, pv)
 

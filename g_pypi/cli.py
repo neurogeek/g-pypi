@@ -144,7 +144,9 @@ class GPyPI(object):
                             self.logger.info("Skipping dependency (exists): %s" % req.project_name)
                     else:
                         self.add_dep(req.project_name)
+            #Only force overwriting and category on first ebuild created, not dependencies
             self.options.overwrite = False
+            self.options.category = None
 
     def add_dep(self, project_name):
         '''Add dependency'''
@@ -248,7 +250,10 @@ class GPyPI(object):
         else:
             self.version = get_highest_version(versions)
 
-        download_url = self.get_uri()
+        if self.options.uri:
+            download_url = self.options.uri
+        else:
+            download_url = self.get_uri()
         try:
             ebuild = Ebuild(self.package_name, self.version, download_url)
         except portage_exception.InvalidVersionString:
@@ -353,6 +358,10 @@ def main():
     opt_parser.add_option("--MY_P", action='store', dest=
                          "my_p", default=False, help=
                          "Specify MY_P")
+
+    opt_parser.add_option("-u", "--uri", action='store', dest=
+                         "uri", default=False, help=
+                         "Specify URI of package if PyPI doesn't have it.")
 
     opt_parser.add_option("-l", "--overlay", action='store', dest=
                          'overlay', metavar='OVERLAY_NAME', default=None, help=
